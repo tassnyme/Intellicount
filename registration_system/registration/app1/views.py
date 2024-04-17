@@ -6,8 +6,10 @@ from django.contrib.auth.decorators import login_required
 from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib import messages
-
-
+from .models import person_collection
+from django.http import JsonResponse
+import json
+from bson import ObjectId 
 @login_required(login_url='login')
 def home(request):
     return render (request,'home.html') 
@@ -96,21 +98,21 @@ def updateuser(request, pk):
         messages.success(request, 'User account has been successfully updated.')
         return redirect('account')
 
-# def updatprofile(request, pk):
-#     if request.method == 'POST':
-#         name = request.POST.get('username')
-#         email = request.POST.get('email')
-#         fname = request.POST.get('first_name')
-#         lname = request.POST.get('last_name')
-#         user = User.objects.get(pk=pk)
-#         user.first_name = fname
-#         user.last_name = lname
-#         user.username = name
-#         user.email = email
-#         user.save()
-#         # Add a success message
-#         messages.success(request, 'User account has been successfully updated.')
-#         return redirect('user_profile')
+def updatprofile(request, pk):
+    if request.method == 'POST':
+        name = request.POST.get('username')
+        email = request.POST.get('email')
+        fname = request.POST.get('first_name')
+        lname = request.POST.get('last_name')
+        user = User.objects.get(pk=pk)
+        user.first_name = fname
+        user.last_name = lname
+        user.username = name
+        user.email = email
+        user.save()
+        # Add a success message
+        messages.success(request, 'User account has been successfully updated.')
+        return redirect('user_profile')
 
 def AddUser(request):
     if request.method == 'POST':
@@ -170,3 +172,37 @@ def verify_user(request, pk):
         messages.error(request, 'Unauthorized access.')
 
     return redirect('account')  # Redirect admin to admin dashboard after verification
+
+
+
+
+
+
+def index(request):
+    return HttpResponse("<h1>app is runnning</h1>")
+
+
+def add_person(request):
+    records={
+        "first_name":"john",
+        "last_name":"smith"
+    }
+
+    person_collection.insert_one(records)
+    return HttpResponse("new person is added")
+
+def convert_to_json(obj):
+    """Converts ObjectId to string for JSON serialization."""
+    if isinstance(obj, ObjectId):
+        return str(obj)  # Convert ObjectId to string
+    raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
+
+def get_all_person(request):
+    persons = list(person_collection.find())
+    # Convert MongoDB cursor to a list of dictionaries
+
+    # Serialize the list of dictionaries to JSON,
+    # using the custom converter function to handle ObjectId
+    serialized_persons = json.dumps(persons, default=convert_to_json)
+
+    return JsonResponse(serialized_persons, safe=False)
